@@ -1,0 +1,10 @@
+{
+	"id": "dired",
+	"name": "Dired",
+	"version": "0.0.10",
+	"minAppVersion": "1.13.0",
+	"description": "Navigate and manage files directly, inspired by the Dired mode from Emacs.",
+	"author": "@gapmiss",
+	"authorUrl": "https://github.com/gapmiss",
+	"isDesktopOnly": false
+}

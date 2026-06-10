@@ -1,0 +1,103 @@
+/* Dired view container */
+
+.dired-view {
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+}
+
+.dired-view .cm-editor {
+	flex: 1;
+	height: 100%;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: var(--font-text-size);
+}
+
+.dired-view .cm-editor.cm-focused {
+	outline: none;
+}
+
+.dired-view .cm-scroller {
+	overflow: auto;
+	padding: var(--size-4-2) 0;
+	font-family: var(--font-monospace);
+}
+
+.dired-view .cm-content {
+	caret-color: var(--text-normal);
+}
+
+.dired-view .cm-gutters {
+	background-color: transparent;
+	border-right: none;
+	color: var(--text-faint);
+	padding-right: var(--size-4-2);
+}
+
+.dired-view .cm-activeLine {
+	background-color: var(--background-modifier-hover);
+}
+
+.dired-view .cm-activeLineGutter {
+	background-color: transparent;
+	color: var(--text-normal);
+}
+
+/* Listing lines */
+
+.dired-view .cm-line.dired-header {
+	color: var(--text-accent);
+	font-style: italic;
+	font-weight: var(--font-semibold);
+}
+
+.dired-view .cm-line.dired-folder {
+	color: var(--text-accent);
+	font-style: italic;
+}
+
+.dired-view .cm-line.dired-empty {
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+.dired-view .cm-line.dired-marked {
+	background-color: var(--text-highlight-bg);
+	box-shadow: inset 3px 0 0 var(--text-accent);
+}
+
+.dired-view .cm-line.dired-marked.cm-activeLine {
+	background-color: var(--text-highlight-bg);
+}
+
+/* Rename (wdired) mode indicator */
+
+.dired-view.dired-rename-mode .cm-editor {
+	box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}
+
+/* Modals */
+
+.dired-prompt-input {
+	width: 100%;
+}
+
+.dired-confirm-list {
+	max-height: 16em;
+	overflow-y: auto;
+}
+
+.dired-suggestion-bookmark {
+	display: inline-flex;
+	vertical-align: middle;
+	margin-left: var(--size-4-2);
+	color: var(--text-accent);
+}
+
+/* Key hints below the listing */
+
+.dired-view .cm-line.dired-hint {
+	color: var(--text-faint);
+}
