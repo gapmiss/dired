@@ -55,15 +55,28 @@ Multi-file operations (`M`, `D`) apply to marked files, or to the file at the cu
 
 ## Installation
 
-### Manual
+[Install from community.obsidian.md](https://community.obsidian.md/plugins/dired)
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release
-2. Copy them to `<vault>/.obsidian/plugins/dired/`
-3. Reload Obsidian and enable **Dired** in Settings → Community plugins
+From Obsidian's settings or preferences:
 
-### BRAT
+1. Community Plugins > Browse
+2. Search for "Dired"
 
-Add `gapmiss/dired` via the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin.
+Manually:
+
+1. download the latest [release](https://github.com/gapmiss/dired/releases/latest) archive
+2. uncompress the downloaded archive
+3. move the `dired` folder to `/path/to/vault/.obsidian/plugins/` 
+4.  Settings > Community plugins > reload **Installed plugins**
+5.  enable plugin
+
+or:
+
+1.  download `main.js`, `manifest.json` & `styles.css` from the latest [release](https://github.com/gapmiss/dired/releases/latest)
+2.  create a new folder `/path/to/vault/.obsidian/plugins/dired`
+3.  move all 3 files to `/path/to/vault/.obsidian/plugins/dired`
+4.  Settings > Community plugins > reload **Installed plugins**
+5.  enable plugin
 
 ## Development
 
