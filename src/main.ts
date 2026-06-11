@@ -26,7 +26,7 @@ export default class DiredPlugin extends Plugin {
 			id: 'open',
 			name: 'Open',
 			callback: () => {
-				void this.openDired(this.activeFolderPath());
+				void this.openDiredAtActiveFile();
 			},
 		});
 
@@ -39,7 +39,7 @@ export default class DiredPlugin extends Plugin {
 		});
 
 		this.addRibbonIcon('folder-tree', 'Open dired', () => {
-			void this.openDired(this.activeFolderPath());
+			void this.openDiredAtActiveFile();
 		});
 
 		this.registerEvent(
@@ -84,19 +84,32 @@ export default class DiredPlugin extends Plugin {
 		return added;
 	}
 
-	private activeFolderPath(): string {
-		return this.app.workspace.getActiveFile()?.parent?.path ?? '/';
+	private async openDiredAtActiveFile(): Promise<void> {
+		// An existing view is revealed as the user left it; the active file only
+		// decides the folder (and cursor) when the view is opened fresh.
+		const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_DIRED)[0];
+		if (leaf) {
+			await this.app.workspace.revealLeaf(leaf);
+			await leaf.loadIfDeferred();
+			if (leaf.view instanceof DiredView) {
+				leaf.view.focusEditor();
+			}
+			return;
+		}
+		const file = this.app.workspace.getActiveFile();
+		await this.openDired(file?.parent?.path ?? '/', file?.path);
 	}
 
-	private async openDired(folderPath: string): Promise<void> {
+	private async openDired(folderPath: string, cursorPath?: string): Promise<void> {
 		let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_DIRED)[0] ?? null;
 		if (!leaf) {
 			leaf = this.app.workspace.getLeaf('tab');
 			await leaf.setViewState({ type: VIEW_TYPE_DIRED, active: true });
 		}
 		await this.app.workspace.revealLeaf(leaf);
+		await leaf.loadIfDeferred();
 		if (leaf.view instanceof DiredView) {
-			leaf.view.openFolderByPath(folderPath);
+			leaf.view.openFolderByPath(folderPath, cursorPath);
 			leaf.view.focusEditor();
 		}
 	}

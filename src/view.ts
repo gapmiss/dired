@@ -120,7 +120,25 @@ export class DiredView extends ItemView {
 
 	openFolderByPath(folderPath: string, cursorPath?: string): void {
 		const target = folderPath === '/' ? this.app.vault.getRoot() : this.app.vault.getAbstractFileByPath(folderPath);
-		this.openFolder(target instanceof TFolder ? target : this.app.vault.getRoot(), cursorPath ?? null);
+		const folder = target instanceof TFolder ? target : this.app.vault.getRoot();
+		if (folder.path === this.listing.folderPath) {
+			// Already showing this folder; vault events keep the listing fresh, so skip the
+			// re-render to preserve cursor and scroll. With a cursorPath, jump to that entry —
+			// fall through to a re-render only if it is not listed yet (e.g. just created).
+			const editor = this.editor;
+			if (!cursorPath || !editor) {
+				return;
+			}
+			const index = this.listing.entries.findIndex((entry) => entry.path === cursorPath);
+			if (index >= 0) {
+				editor.dispatch({
+					selection: { anchor: editor.state.doc.line(lineForEntryIndex(index)).from },
+					scrollIntoView: true,
+				});
+				return;
+			}
+		}
+		this.openFolder(folder, cursorPath ?? null);
 	}
 
 	// --- Editor setup ---
