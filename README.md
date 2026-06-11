@@ -47,6 +47,10 @@ Multi-file operations (`M`, `D`) apply to marked files, or to the file at the cu
 - Ribbon: the folder-tree icon
 - File explorer: right-click a folder → **Open in dired**
 
+## Customization
+
+The view inherits your theme's monospace font and editor font size. Everything else — fonts, colors, line numbers, spacing — can be overridden with a CSS snippet: see [THEME.md](THEME.md) for a selector reference, recipes, and a visual showcase snippet.
+
 ## Notes and limitations
 
 - Vault-scoped: the listing shows what Obsidian indexes, so hidden folders such as `.obsidian` do not appear
