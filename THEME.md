@@ -44,6 +44,20 @@ If a tweak stops working after a plugin update, a selector may have changed — 
 	font-size: 18px;
 }
 
+/* Scale all dired text relative to your editor font size —
+   90% here, never smaller than 12px or larger than 18px.
+   Line numbers and the filter input don't inherit the buffer
+   size, so they're included too. */
+.dired-view {
+	--dired-font-size: clamp(12px, calc(var(--font-text-size) * 0.9), 18px);
+}
+
+.dired-view .cm-editor,
+.dired-view .cm-gutters,
+.dired-view .dired-filter-input {
+	font-size: var(--dired-font-size);
+}
+
 /* Proportional font instead of monospace
    (the plugin sets the font on both elements, so override both) */
 .dired-view .cm-editor,
