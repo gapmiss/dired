@@ -1,4 +1,4 @@
-import { App, FuzzySuggestModal, Modal, Setting, TFolder, setIcon } from 'obsidian';
+import { App, FuzzySuggestModal, Modal, TFolder, setIcon } from 'obsidian';
 import type { FuzzyMatch } from 'obsidian';
 import type { DiredEntry } from './state';
 import { entryLineText } from './state';
@@ -31,43 +31,6 @@ export class PromptModal extends Modal {
 	onOpen(): void {
 		this.inputEl.focus();
 		this.inputEl.select();
-	}
-}
-
-export class ConfirmModal extends Modal {
-	private confirmButtonEl: HTMLButtonElement | null = null;
-
-	constructor(app: App, title: string, items: string[], ctaText: string, onConfirm: () => void) {
-		super(app);
-		this.setTitle(title);
-		const listEl = this.contentEl.createEl('ul', { cls: 'dired-confirm-list' });
-		const maxShown = 10;
-		for (const item of items.slice(0, maxShown)) {
-			listEl.createEl('li', { text: item });
-		}
-		if (items.length > maxShown) {
-			listEl.createEl('li', { text: `…and ${items.length - maxShown} more` });
-		}
-		new Setting(this.contentEl)
-			.addButton((btn) =>
-				btn.setButtonText('Cancel').onClick(() => {
-					this.close();
-				})
-			)
-			.addButton((btn) => {
-				btn.setButtonText(ctaText)
-					.setDestructive()
-					.setCta()
-					.onClick(() => {
-						this.close();
-						onConfirm();
-					});
-				this.confirmButtonEl = btn.buttonEl;
-			});
-	}
-
-	onOpen(): void {
-		this.confirmButtonEl?.focus();
 	}
 }
 

@@ -12,13 +12,12 @@ import {
 	buildListing,
 	decorationsField,
 	entryIndexForLine,
-	entryLineText,
 	joinPath,
 	lineForEntryIndex,
 	setDecorations,
 } from './state';
 import type { DiredEntry, DiredListing } from './state';
-import { ConfirmModal, FolderSuggestModal, JumpModal, PromptModal } from './modals';
+import { FolderSuggestModal, JumpModal, PromptModal } from './modals';
 
 export const VIEW_TYPE_DIRED = 'dired';
 
@@ -580,10 +579,7 @@ export class DiredView extends ItemView {
 		if (targets.length === 0) {
 			return true;
 		}
-		const title = `Move ${targets.length} item${targets.length === 1 ? '' : 's'} to trash?`;
-		new ConfirmModal(this.app, title, targets.map(entryLineText), 'Delete', () => {
-			void this.trashEntries(targets);
-		}).open();
+		void this.trashEntries(targets);
 		return true;
 	}
 
@@ -594,7 +590,9 @@ export class DiredView extends ItemView {
 				continue;
 			}
 			try {
-				await this.app.fileManager.trashFile(file);
+				// Native deletion flow: confirmation + linked-attachment prompt,
+				// per file like the core file explorer; cancel skips to the next.
+				await this.app.fileManager.promptForDeletion(file);
 			} catch (error) {
 				new Notice(`Could not delete ${target.name}: ${error instanceof Error ? error.message : String(error)}`);
 			}

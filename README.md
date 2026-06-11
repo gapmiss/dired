@@ -9,7 +9,7 @@ The directory listing is a real CodeMirror buffer: the first line is the current
 - **Text-buffer file manager** — navigate with the cursor, no mouse required
 - **Marks** — mark multiple files, then move or delete them in one batch
 - **Rename mode (wdired-style)** — press `R`, edit names directly in the buffer, press `Enter` to apply. Renames and moves go through Obsidian's `FileManager`, so wiki links and embeds are updated automatically
-- **Safe deletes** — files are moved to trash (respects your "Deleted files" preference), with a confirmation listing
+- **Safe deletes** — deletions use Obsidian's native per-file confirmation (respecting your "Confirm file deletion" and "Deleted files" preferences), including the prompt to delete linked attachments
 - **Bookmarks** — bookmark folders and fuzzy-jump to them from anywhere
 - **Preview mode** — automatically open the file at the cursor in a split as you move
 - **Inline key hints** — the bottom of the buffer lists every binding; toggle with `?`
