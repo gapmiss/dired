@@ -22,6 +22,8 @@ export function diredKeymap(view: DiredView): KeyBinding[] {
 		{ key: 'n', run: () => view.moveCursor(1) },
 		{ key: 'j', run: () => view.jumpToEntry() },
 		{ key: 'r', run: () => view.refresh() },
+		{ key: '/', run: () => view.startFilter() },
+		{ key: 'Escape', run: () => view.clearFilter() },
 		{ key: 'P', run: () => view.togglePreviewMode() },
 		{ key: '?', run: () => view.toggleHints() },
 	];

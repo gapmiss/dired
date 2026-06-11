@@ -9,10 +9,32 @@
 .dired-view .cm-editor {
 	flex: 1;
 	height: 100%;
+	min-height: 0;
 	background-color: var(--background-primary);
 	color: var(--text-normal);
 	font-family: var(--font-monospace);
 	font-size: var(--font-text-size);
+}
+
+/* Filter bar */
+
+.dired-view .dired-filter {
+	display: flex;
+	flex: 0 0 auto;
+	padding: var(--size-4-1) var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dired-view .dired-filter-input {
+	flex: 1;
+	font-family: var(--font-monospace);
+}
+
+.dired-view .cm-line .dired-filter-match {
+	font-weight: var(--font-semibold);
+	text-decoration: underline;
+	text-decoration-color: var(--text-accent);
+	text-underline-offset: 0.2em;
 }
 
 .dired-view .cm-editor.cm-focused {

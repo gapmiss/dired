@@ -2,15 +2,18 @@ import { RangeSetBuilder, StateEffect, StateField } from '@codemirror/state';
 import type { Text } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 import type { DecorationSet } from '@codemirror/view';
-import { TFolder } from 'obsidian';
+import { TFolder, prepareFuzzySearch } from 'obsidian';
+import type { SearchMatches } from 'obsidian';
 
 export const ENTRY_START_LINE = 3;
 export const EMPTY_TEXT = '(empty)';
+export const NO_MATCHES_TEXT = '(no matches)';
 
 export interface DiredEntry {
 	path: string;
 	name: string;
 	isFolder: boolean;
+	matches?: SearchMatches;
 }
 
 export interface DiredListing {
@@ -45,6 +48,7 @@ export const HELP_LINES: string[] = [
 	' n = move to next file',
 	' r = refresh view',
 	' j = jump to file/dir name',
+	' / = filter entries (esc clears)',
 	'',
 	' B = goto bookmark or any directory',
 	' ab = toggle bookmark for current directory',
@@ -56,20 +60,34 @@ export const HELP_LINES: string[] = [
 export function buildListing(
 	folder: TFolder,
 	vaultName: string,
-	showHints: boolean
+	showHints: boolean,
+	filterQuery = ''
 ): { listing: DiredListing; text: string } {
 	const children = [...folder.children].sort((a, b) =>
 		a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
 	);
-	const entries: DiredEntry[] = children.map((child) => ({
+	let entries: DiredEntry[] = children.map((child) => ({
 		path: child.path,
 		name: child.name,
 		isFolder: child instanceof TFolder,
 	}));
+	const query = filterQuery.trim();
+	if (query.length > 0) {
+		const fuzzy = prepareFuzzySearch(query);
+		const matched: DiredEntry[] = [];
+		for (const entry of entries) {
+			const result = fuzzy(entry.name);
+			if (result) {
+				entry.matches = result.matches;
+				matched.push(entry);
+			}
+		}
+		entries = matched;
+	}
 	const header = (folder.isRoot() ? vaultName : `${vaultName}/${folder.path}`) + '/';
 	const lines = [header, ''];
 	if (entries.length === 0) {
-		lines.push(EMPTY_TEXT);
+		lines.push(query.length > 0 ? NO_MATCHES_TEXT : EMPTY_TEXT);
 	} else {
 		for (const entry of entries) {
 			lines.push(entryLineText(entry));
@@ -97,6 +115,8 @@ export function firstHintLine(listing: DiredListing): number {
 	return ENTRY_START_LINE + Math.max(listing.entries.length, 1) + 1;
 }
 
+const filterMatchMark = Decoration.mark({ class: 'dired-filter-match' });
+
 export function buildDecorations(doc: Text, listing: DiredListing, marks: ReadonlySet<string>): DecorationSet {
 	const builder = new RangeSetBuilder<Decoration>();
 	const header = doc.line(1);
@@ -118,6 +138,9 @@ export function buildDecorations(doc: Text, listing: DiredListing, marks: Readon
 				classes.push('dired-marked');
 			}
 			builder.add(line.from, line.from, Decoration.line({ class: classes.join(' ') }));
+			for (const [start, end] of entry.matches ?? []) {
+				builder.add(line.from + start, line.from + end, filterMatchMark);
+			}
 		});
 	}
 	for (let lineNo = firstHintLine(listing); lineNo <= doc.lines; lineNo += 1) {

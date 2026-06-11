@@ -38,6 +38,9 @@ export class DiredView extends ItemView {
 	private previewDirection: SplitDirection | null = null;
 	private previewTimeout = 0;
 	private renderTimeout = 0;
+	private filterQuery = '';
+	private filterEl: HTMLElement | null = null;
+	private filterInput: HTMLInputElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: DiredPlugin) {
 		super(leaf);
@@ -209,9 +212,15 @@ export class DiredView extends ItemView {
 		if (this.renameMode) {
 			this.exitRenameMode();
 		}
-		const { listing, text } = buildListing(folder, this.app.vault.getName(), this.showHints);
+		if (folder.path !== this.listing.folderPath) {
+			this.filterQuery = '';
+			this.removeFilterBar();
+		}
+		const { listing, text } = buildListing(folder, this.app.vault.getName(), this.showHints, this.filterQuery);
 		this.listing = listing;
-		const valid = new Set(listing.entries.map((entry) => entry.path));
+		// Prune against the folder's full children, not the (possibly filtered) listing,
+		// so marks on filtered-out entries survive.
+		const valid = new Set(folder.children.map((child) => child.path));
 		for (const path of Array.from(this.marks)) {
 			if (!valid.has(path)) {
 				this.marks.delete(path);
@@ -469,6 +478,72 @@ export class DiredView extends ItemView {
 		return folders;
 	}
 
+	// --- Filtering ---
+
+	startFilter(): boolean {
+		if (this.renameMode) {
+			return true;
+		}
+		this.ensureFilterBar();
+		this.filterInput?.focus();
+		this.filterInput?.select();
+		return true;
+	}
+
+	clearFilter(): boolean {
+		if (this.filterQuery.length === 0 && !this.filterEl) {
+			return false;
+		}
+		this.filterQuery = '';
+		this.removeFilterBar();
+		this.refresh();
+		this.focusEditor();
+		return true;
+	}
+
+	private ensureFilterBar(): void {
+		if (this.filterEl) {
+			return;
+		}
+		const bar = this.contentEl.createDiv({ cls: 'dired-filter', prepend: true });
+		const input = bar.createEl('input', {
+			cls: 'dired-filter-input',
+			type: 'search',
+			value: this.filterQuery,
+			placeholder: 'Filter entries…',
+			attr: { 'aria-label': 'Filter entries', spellcheck: 'false' },
+		});
+		this.registerDomEvent(input, 'input', () => this.applyFilter(input.value));
+		this.registerDomEvent(input, 'keydown', (event) => {
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				if (input.value.length === 0) {
+					this.clearFilter();
+				} else {
+					this.focusEditor();
+				}
+			} else if (event.key === 'Escape') {
+				event.preventDefault();
+				event.stopPropagation();
+				this.clearFilter();
+			}
+		});
+		this.filterEl = bar;
+		this.filterInput = input;
+	}
+
+	private removeFilterBar(): void {
+		this.filterEl?.remove();
+		this.filterEl = null;
+		this.filterInput = null;
+	}
+
+	private applyFilter(query: string): void {
+		this.filterQuery = query;
+		const cursorPath = this.entryAtCursor()?.path ?? null;
+		this.openFolder(this.currentFolder() ?? this.app.vault.getRoot(), cursorPath);
+	}
+
 	// --- File operations ---
 
 	createDirectory(): boolean {
@@ -567,6 +642,9 @@ export class DiredView extends ItemView {
 		this.renameOriginal = this.listing.entries.map((entry) => ({ ...entry }));
 		editor.dispatch({ effects: this.modeCompartment.reconfigure(this.renameModeExtensions()) });
 		this.contentEl.addClass('dired-rename-mode');
+		if (this.filterInput) {
+			this.filterInput.disabled = true;
+		}
 		new Notice('Rename mode: press enter to apply, esc to cancel');
 		return true;
 	}
@@ -619,6 +697,9 @@ export class DiredView extends ItemView {
 		this.renameMode = false;
 		this.renameOriginal = [];
 		this.contentEl.removeClass('dired-rename-mode');
+		if (this.filterInput) {
+			this.filterInput.disabled = false;
+		}
 		this.editor?.dispatch({ effects: this.modeCompartment.reconfigure(this.normalModeExtensions()) });
 	}
 
