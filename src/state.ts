@@ -37,6 +37,7 @@ export const HELP_LINES: string[] = [
 	'',
 	' Enter/o = open file / view directory',
 	' R = rename mode (enter applies, esc cancels)',
+	' ctrl+alt+up/down = add cursors (rename mode)',
 	' M = move',
 	' D = delete',
 	' cd = create directory',

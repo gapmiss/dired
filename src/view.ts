@@ -1,8 +1,8 @@
 import { ItemView, Notice, TFile, TFolder, normalizePath } from 'obsidian';
 import type { SplitDirection, TAbstractFile, ViewStateResult, WorkspaceLeaf } from 'obsidian';
-import { Compartment, EditorState, Prec, Transaction } from '@codemirror/state';
+import { Compartment, EditorSelection, EditorState, Prec, Transaction } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
-import { EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view';
+import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view';
 import { history, historyKeymap, standardKeymap } from '@codemirror/commands';
 import type DiredPlugin from './main';
 import { diredKeymap, renameKeymap } from './keymap';
@@ -173,6 +173,9 @@ export class DiredView extends ItemView {
 		return [
 			Prec.highest(keymap.of(renameKeymap(this))),
 			EditorState.readOnly.of(false),
+			EditorState.allowMultipleSelections.of(true),
+			// The browser renders only one native caret, so extra cursors must be drawn by CM.
+			drawSelection(),
 			EditorState.transactionFilter.of((tr) => this.filterRenameTransaction(tr)),
 		];
 	}
@@ -643,12 +646,55 @@ export class DiredView extends ItemView {
 		if (this.filterInput) {
 			this.filterInput.disabled = true;
 		}
-		new Notice('Rename mode: press enter to apply, esc to cancel');
+		new Notice('Rename mode: enter applies, esc cancels, ctrl+alt+up/down adds cursors');
+		return true;
+	}
+
+	addRenameCursor(delta: -1 | 1): boolean {
+		const editor = this.editor;
+		if (!editor || !this.renameMode) {
+			return true;
+		}
+		const doc = editor.state.doc;
+		const selection = editor.state.selection;
+		const lines = selection.ranges.map((range) => doc.lineAt(range.head).number);
+		const mainLine = doc.lineAt(selection.main.head).number;
+		// Moving back toward the main cursor removes the far edge of the cursor
+		// column first (vscode-style overshoot correction) instead of growing.
+		const farLine = delta < 0 ? Math.max(...lines) : Math.min(...lines);
+		if (delta < 0 ? farLine > mainLine : farLine < mainLine) {
+			const kept = selection.ranges.filter((range) => doc.lineAt(range.head).number !== farLine);
+			const mainIndex = kept.findIndex((range) => range.eq(selection.main));
+			editor.dispatch({
+				selection: EditorSelection.create(kept, Math.max(0, mainIndex)),
+				scrollIntoView: true,
+			});
+			return true;
+		}
+		const targetLine = (delta < 0 ? Math.min(...lines) : Math.max(...lines)) + delta;
+		const lastEntryLine = lineForEntryIndex(this.listing.entries.length - 1);
+		if (targetLine < ENTRY_START_LINE || targetLine > lastEntryLine) {
+			return true;
+		}
+		// Place the new cursor at the main cursor's column so it stays the goal
+		// column even after passing shorter names.
+		const column = selection.main.head - doc.lineAt(selection.main.head).from;
+		const line = doc.line(targetLine);
+		const pos = line.from + Math.min(column, line.length);
+		editor.dispatch({
+			selection: selection.addRange(EditorSelection.cursor(pos), false),
+			effects: EditorView.scrollIntoView(pos),
+		});
 		return true;
 	}
 
 	cancelRename(): boolean {
 		if (!this.renameMode) {
+			return true;
+		}
+		const editor = this.editor;
+		if (editor && editor.state.selection.ranges.length > 1) {
+			editor.dispatch({ selection: { anchor: editor.state.selection.main.head } });
 			return true;
 		}
 		this.exitRenameMode();
@@ -698,7 +744,14 @@ export class DiredView extends ItemView {
 		if (this.filterInput) {
 			this.filterInput.disabled = false;
 		}
-		this.editor?.dispatch({ effects: this.modeCompartment.reconfigure(this.normalModeExtensions()) });
+		const editor = this.editor;
+		if (editor) {
+			// Collapse any multi-cursor in the same transaction that disables multiple selections.
+			editor.dispatch({
+				selection: { anchor: editor.state.selection.main.head },
+				effects: this.modeCompartment.reconfigure(this.normalModeExtensions()),
+			});
+		}
 	}
 
 	private async applyRenames(renames: { entry: DiredEntry; newPath: string }[]): Promise<void> {

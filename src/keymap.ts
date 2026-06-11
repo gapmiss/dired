@@ -33,5 +33,7 @@ export function renameKeymap(view: DiredView): KeyBinding[] {
 	return [
 		{ key: 'Enter', run: () => view.commitRename() },
 		{ key: 'Escape', run: () => view.cancelRename() },
+		{ key: 'Ctrl-Alt-ArrowUp', run: () => view.addRenameCursor(-1) },
+		{ key: 'Ctrl-Alt-ArrowDown', run: () => view.addRenameCursor(1) },
 	];
 }

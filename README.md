@@ -8,7 +8,7 @@ The directory listing is a real CodeMirror buffer: the first line is the current
 
 - **Text-buffer file manager** — navigate with the cursor, no mouse required
 - **Marks** — mark multiple files, then move or delete them in one batch
-- **Rename mode (wdired-style)** — press `R`, edit names directly in the buffer, press `Enter` to apply. Renames and moves go through Obsidian's `FileManager`, so wiki links and embeds are updated automatically
+- **Rename mode (wdired-style)** — press `R`, edit names directly in the buffer, press `Enter` to apply. `Ctrl+Alt+↑/↓` stacks cursors on adjacent lines to edit many names at once. Renames and moves go through Obsidian's `FileManager`, so wiki links and embeds are updated automatically
 - **Safe deletes** — deletions use Obsidian's native per-file confirmation (respecting your "Confirm file deletion" and "Deleted files" preferences), including the prompt to delete linked attachments
 - **Bookmarks** — bookmark folders and fuzzy-jump to them from anywhere
 - **Preview mode** — automatically open the file at the cursor in a split as you move
@@ -25,6 +25,7 @@ The directory listing is a real CodeMirror buffer: the first line is the current
 | `*.` | Mark by file extension |
 | `Enter` / `o` | Open file / view directory |
 | `R` | Rename mode — edit names in the buffer, `Enter` applies, `Esc` cancels |
+| `Ctrl+Alt+↑/↓` | Add cursors above/below for column editing (rename mode only) |
 | `M` | Move marked files (or file at cursor) |
 | `D` | Delete marked files (or file at cursor) to trash |
 | `cd` | Create directory |

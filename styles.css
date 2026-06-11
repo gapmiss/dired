@@ -100,6 +100,18 @@
 	box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
+/* Multi-cursor in rename mode (drawSelection replaces the native caret) */
+
+.dired-view .cm-editor .cm-cursor,
+.dired-view .cm-editor .cm-dropCursor {
+	border-left-color: var(--text-normal);
+}
+
+.dired-view .cm-editor .cm-selectionBackground,
+.dired-view .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+	background-color: var(--text-selection);
+}
+
 /* Modals */
 
 .dired-prompt-input {
