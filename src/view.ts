@@ -40,6 +40,7 @@ export class DiredView extends ItemView {
 	private filterQuery = '';
 	private filterEl: HTMLElement | null = null;
 	private filterInput: HTMLInputElement | null = null;
+	private folderCache: TFolder[] | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: DiredPlugin) {
 		super(leaf);
@@ -271,6 +272,7 @@ export class DiredView extends ItemView {
 	}
 
 	private onVaultMutation(file: TAbstractFile, oldPath: string | null): void {
+		this.folderCache = null;
 		if (this.renameMode) {
 			return;
 		}
@@ -473,10 +475,14 @@ export class DiredView extends ItemView {
 	}
 
 	private allFolders(): TFolder[] {
+		if (this.folderCache) {
+			return this.folderCache;
+		}
 		const folders = this.app.vault
 			.getAllLoadedFiles()
 			.filter((file): file is TFolder => file instanceof TFolder);
 		folders.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
+		this.folderCache = folders;
 		return folders;
 	}
 
