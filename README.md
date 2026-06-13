@@ -4,6 +4,8 @@ Navigate and manage vault files from a keyboard-driven text buffer, inspired by 
 
 The directory listing is a real CodeMirror buffer: the first line is the current path, folders end with `/`, and every operation is a single key (or two-key chord) away.
 
+![](assets/dired-demo-screenshot.png)
+
 ## Features
 
 - **Text-buffer file manager** — navigate with the cursor, no mouse required
