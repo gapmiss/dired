@@ -26,6 +26,12 @@ export function diredKeymap(view: DiredView): KeyBinding[] {
 		{ key: 'Escape', run: () => view.clearFilter() },
 		{ key: 'P', run: () => view.togglePreviewMode() },
 		{ key: '?', run: () => view.toggleHints() },
+		// Consume undo/redo: history lives only in rename mode, and unhandled
+		// Mod-z would bubble to Obsidian's editor:undo, which still targets the
+		// last-focused markdown editor while dired has focus.
+		{ key: 'Mod-z', run: () => true },
+		{ key: 'Mod-Shift-z', run: () => true },
+		{ key: 'Mod-y', run: () => true },
 	];
 }
 

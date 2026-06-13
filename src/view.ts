@@ -14,6 +14,7 @@ import {
 	entryIndexForLine,
 	joinPath,
 	lineForEntryIndex,
+	nameCollator,
 	setDecorations,
 } from './state';
 import type { DiredEntry, DiredListing } from './state';
@@ -37,6 +38,7 @@ export class DiredView extends ItemView {
 	private previewDirection: SplitDirection | null = null;
 	private previewTimeout = 0;
 	private renderTimeout = 0;
+	private focusTimeout = 0;
 	private filterQuery = '';
 	private filterEl: HTMLElement | null = null;
 	private filterInput: HTMLInputElement | null = null;
@@ -72,7 +74,7 @@ export class DiredView extends ItemView {
 			this.app.workspace.on('active-leaf-change', (leaf) => {
 				if (leaf === this.leaf) {
 					// Defer so the editor takes focus after Obsidian finishes activating the leaf.
-					this.contentEl.win.setTimeout(() => this.focusEditor(), 0);
+					this.focusTimeout = this.contentEl.win.setTimeout(() => this.focusEditor(), 0);
 				}
 			})
 		);
@@ -85,6 +87,7 @@ export class DiredView extends ItemView {
 		const win = this.contentEl.win;
 		win.clearTimeout(this.previewTimeout);
 		win.clearTimeout(this.renderTimeout);
+		win.clearTimeout(this.focusTimeout);
 		this.editor?.destroy();
 		this.editor = null;
 		return Promise.resolve();
@@ -150,10 +153,9 @@ export class DiredView extends ItemView {
 		return [
 			lineNumbers(),
 			highlightActiveLine(),
-			history(),
 			decorationsField,
 			this.modeCompartment.of(this.normalModeExtensions()),
-			keymap.of([...standardKeymap, ...historyKeymap]),
+			keymap.of(standardKeymap),
 			EditorView.updateListener.of((update) => {
 				if (update.selectionSet && !this.renameMode) {
 					this.schedulePreview();
@@ -173,6 +175,10 @@ export class DiredView extends ItemView {
 	private renameModeExtensions(): Extension {
 		return [
 			Prec.highest(keymap.of(renameKeymap(this))),
+			// Scoped to the compartment so each rename session starts with a fresh
+			// undo history; reconfiguring back to normal mode discards it.
+			history(),
+			keymap.of(historyKeymap),
 			EditorState.readOnly.of(false),
 			EditorState.allowMultipleSelections.of(true),
 			// The browser renders only one native caret, so extra cursors must be drawn by CM.
@@ -243,14 +249,15 @@ export class DiredView extends ItemView {
 				cursorLine = Math.max(ENTRY_START_LINE, Math.min(lastLine, fallbackLine));
 			}
 		}
+		// Single transaction: selection and decorations are interpreted against the
+		// post-change document, so CM never paints an undecorated intermediate state.
+		const newDoc = editor.state.toText(text);
+		const pos = newDoc.line(Math.min(cursorLine, newDoc.lines)).from;
 		editor.dispatch({
-			changes: { from: 0, to: editor.state.doc.length, insert: text },
-			annotations: Transaction.addToHistory.of(false),
-		});
-		const pos = editor.state.doc.line(Math.min(cursorLine, editor.state.doc.lines)).from;
-		editor.dispatch({
+			changes: { from: 0, to: editor.state.doc.length, insert: newDoc },
 			selection: { anchor: pos },
-			effects: setDecorations.of(buildDecorations(editor.state.doc, listing, this.marks)),
+			effects: setDecorations.of(buildDecorations(newDoc, listing, this.marks)),
+			annotations: Transaction.addToHistory.of(false),
 			scrollIntoView: true,
 		});
 	}
@@ -272,13 +279,29 @@ export class DiredView extends ItemView {
 	}
 
 	private onVaultMutation(file: TAbstractFile, oldPath: string | null): void {
-		this.folderCache = null;
+		// Only folder events can change the folder set; renamed TFolder objects keep
+		// their identity, so descendants' paths update in place either way.
+		if (file instanceof TFolder) {
+			this.folderCache = null;
+		}
 		if (this.renameMode) {
 			return;
 		}
-		if (oldPath !== null && this.marks.has(oldPath)) {
-			this.marks.delete(oldPath);
-			this.marks.add(file.path);
+		if (oldPath !== null) {
+			if (this.listing.folderPath === oldPath || this.listing.folderPath.startsWith(`${oldPath}/`)) {
+				// Follow renames of the current folder (or an ancestor) so the scheduled
+				// refresh resolves the new path instead of falling back to the vault root.
+				this.listing = {
+					...this.listing,
+					folderPath: file.path + this.listing.folderPath.slice(oldPath.length),
+				};
+			}
+			for (const path of Array.from(this.marks)) {
+				if (path === oldPath || path.startsWith(`${oldPath}/`)) {
+					this.marks.delete(path);
+					this.marks.add(file.path + path.slice(oldPath.length));
+				}
+			}
 		}
 		const parentOf = (path: string): string => {
 			const index = path.lastIndexOf('/');
@@ -378,7 +401,7 @@ export class DiredView extends ItemView {
 			}
 			let count = 0;
 			for (const entry of this.listing.entries) {
-				if (!entry.isFolder && entry.name.toLowerCase().endsWith(`.${extension}`)) {
+				if (!entry.isFolder && entry.name.toLowerCase().endsWith(`.${extension}`) && !this.marks.has(entry.path)) {
 					this.marks.add(entry.path);
 					count += 1;
 				}
@@ -444,9 +467,10 @@ export class DiredView extends ItemView {
 	}
 
 	toggleBookmark(): boolean {
-		void this.plugin.toggleBookmark(this.listing.folderPath).then((added) => {
-			new Notice(added ? 'Bookmark added' : 'Bookmark removed');
-		});
+		void this.plugin.toggleBookmark(this.listing.folderPath).then(
+			(added) => new Notice(added ? 'Bookmark added' : 'Bookmark removed'),
+			() => new Notice('Could not save bookmark')
+		);
 		return true;
 	}
 
@@ -469,9 +493,23 @@ export class DiredView extends ItemView {
 		const editor = this.editor;
 		const fallbackLine = editor ? editor.state.doc.lineAt(editor.state.selection.main.head).number : undefined;
 		const cursorPath = this.entryAtCursor()?.path ?? null;
-		const folder = this.currentFolder() ?? this.app.vault.getRoot();
+		const folder = this.currentFolder() ?? this.nearestExistingAncestor(this.listing.folderPath);
 		this.openFolder(folder, cursorPath, fallbackLine);
 		return true;
+	}
+
+	// When the shown folder vanishes (deleted in-app or externally), stay close:
+	// climb to the nearest surviving ancestor instead of resetting to the root.
+	private nearestExistingAncestor(path: string): TFolder {
+		let current = path;
+		while (current.includes('/')) {
+			current = current.substring(0, current.lastIndexOf('/'));
+			const file = this.app.vault.getAbstractFileByPath(current);
+			if (file instanceof TFolder) {
+				return file;
+			}
+		}
+		return this.app.vault.getRoot();
 	}
 
 	private allFolders(): TFolder[] {
@@ -481,7 +519,7 @@ export class DiredView extends ItemView {
 		const folders = this.app.vault
 			.getAllLoadedFiles()
 			.filter((file): file is TFolder => file instanceof TFolder);
-		folders.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
+		folders.sort((a, b) => nameCollator.compare(a.path, b.path));
 		this.folderCache = folders;
 		return folders;
 	}
@@ -521,8 +559,10 @@ export class DiredView extends ItemView {
 			placeholder: 'Filter entries…',
 			attr: { 'aria-label': 'Filter entries', spellcheck: 'false' },
 		});
-		this.registerDomEvent(input, 'input', () => this.applyFilter(input.value));
-		this.registerDomEvent(input, 'keydown', (event) => {
+		// Plain listeners: the bar is recreated per folder, so cleanup must follow the
+		// element's lifetime, not the view's (registerDomEvent would accumulate handlers).
+		input.addEventListener('input', () => this.applyFilter(input.value));
+		input.addEventListener('keydown', (event) => {
 			if (event.key === 'Enter') {
 				event.preventDefault();
 				if (input.value.length === 0) {
@@ -570,13 +610,20 @@ export class DiredView extends ItemView {
 
 	private async createInCurrentFolder(name: string, isFolder: boolean): Promise<void> {
 		const path = normalizePath(joinPath(this.listing.folderPath, name));
+		const slash = path.lastIndexOf('/');
+		const parent = slash < 0 ? '/' : path.substring(0, slash);
 		try {
 			if (isFolder) {
 				await this.app.vault.createFolder(path);
 			} else {
+				if (parent !== '/' && !this.app.vault.getAbstractFileByPath(parent)) {
+					await this.app.vault.createFolder(parent);
+				}
 				await this.app.vault.create(path, '');
 			}
-			this.openFolderByPath(this.listing.folderPath, path);
+			// Reveal the entry where it actually lives: `name` may contain subfolders,
+			// so the created item's parent can differ from the current folder.
+			this.openFolderByPath(parent, path);
 		} catch (error) {
 			new Notice(`Dired: ${error instanceof Error ? error.message : String(error)}`);
 		}
@@ -627,14 +674,24 @@ export class DiredView extends ItemView {
 			if (!file) {
 				continue;
 			}
+			if (file instanceof TFolder && (destination.path === file.path || destination.path.startsWith(`${file.path}/`))) {
+				new Notice(`Cannot move ${file.name} into itself`);
+				continue;
+			}
+			if (file.parent?.path === destination.path) {
+				continue;
+			}
 			const newPath = normalizePath(joinPath(destination.path, file.name));
 			try {
 				await this.app.fileManager.renameFile(file, newPath);
+				// Unmark only what actually moved; the rename event may already have
+				// remapped the mark onto newPath, so clear both spellings.
+				this.marks.delete(target.path);
+				this.marks.delete(newPath);
 			} catch (error) {
 				new Notice(`Could not move ${target.name}: ${error instanceof Error ? error.message : String(error)}`);
 			}
 		}
-		this.marks.clear();
 		this.focusEditor();
 	}
 
@@ -761,11 +818,39 @@ export class DiredView extends ItemView {
 	}
 
 	private async applyRenames(renames: { entry: DiredEntry; newPath: string }[]): Promise<void> {
+		// Order so no rename targets a path another pending rename still occupies
+		// (chains like a→b + b→c); break pure cycles (swaps) via a temporary name.
+		const occupied = new Set(renames.map((rename) => rename.entry.path));
+		const pending = [...renames];
+		const ordered: typeof pending = [];
+		while (pending.length > 0) {
+			const index = pending.findIndex((rename) => !occupied.has(rename.newPath));
+			if (index >= 0) {
+				const [next] = pending.splice(index, 1);
+				occupied.delete(next.entry.path);
+				ordered.push(next);
+				continue;
+			}
+			const cycled = pending[0];
+			occupied.delete(cycled.entry.path);
+			const file = this.app.vault.getAbstractFileByPath(cycled.entry.path);
+			if (file) {
+				const temp = `${cycled.entry.path}.dired-tmp-${Date.now()}`;
+				try {
+					await this.app.fileManager.renameFile(file, temp);
+					pending[0] = { entry: { ...cycled.entry, path: temp }, newPath: cycled.newPath };
+				} catch (error) {
+					// Keep the original path; the final rename attempt will surface the error.
+					console.error('dired: could not divert rename through a temporary name', error);
+				}
+			}
+		}
 		let failures = 0;
-		for (const { entry, newPath } of renames) {
+		for (const { entry, newPath } of ordered) {
 			const file = this.app.vault.getAbstractFileByPath(entry.path);
 			if (!file) {
 				failures += 1;
+				new Notice(`Could not rename ${entry.name}: file no longer exists`);
 				continue;
 			}
 			try {
@@ -775,7 +860,7 @@ export class DiredView extends ItemView {
 				new Notice(`Could not rename ${entry.name}: ${error instanceof Error ? error.message : String(error)}`);
 			}
 		}
-		const done = renames.length - failures;
+		const done = ordered.length - failures;
 		if (done > 0) {
 			new Notice(`Renamed ${done} item${done === 1 ? '' : 's'}`);
 		}
@@ -786,6 +871,7 @@ export class DiredView extends ItemView {
 
 	togglePreviewMode(): boolean {
 		this.previewMode = !this.previewMode;
+		this.app.workspace.requestSaveLayout();
 		new Notice(`Preview mode ${this.previewMode ? 'on' : 'off'}`);
 		if (this.previewMode) {
 			this.schedulePreview();
@@ -800,7 +886,7 @@ export class DiredView extends ItemView {
 		const win = this.contentEl.win;
 		win.clearTimeout(this.previewTimeout);
 		this.previewTimeout = win.setTimeout(() => {
-			void this.showPreview();
+			this.showPreview().catch((error: unknown) => console.error('dired: preview failed', error));
 		}, 150);
 	}
 
@@ -844,6 +930,7 @@ export class DiredView extends ItemView {
 
 	toggleHints(): boolean {
 		this.showHints = !this.showHints;
+		this.app.workspace.requestSaveLayout();
 		this.refresh();
 		return true;
 	}

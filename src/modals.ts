@@ -4,33 +4,37 @@ import type { DiredEntry } from './state';
 import { entryLineText } from './state';
 
 export class PromptModal extends Modal {
-	private inputEl: HTMLInputElement;
-
-	constructor(app: App, title: string, initial: string, placeholder: string, onSubmit: (value: string) => void) {
+	constructor(
+		app: App,
+		private promptTitle: string,
+		private initial: string,
+		private placeholder: string,
+		private onSubmit: (value: string) => void
+	) {
 		super(app);
-		this.setTitle(title);
-		this.inputEl = this.contentEl.createEl('input', {
-			type: 'text',
-			value: initial,
-			placeholder,
-			cls: 'dired-prompt-input',
-			attr: { 'aria-label': title },
-		});
-		this.inputEl.addEventListener('keydown', (evt) => {
-			if (evt.key === 'Enter') {
-				evt.preventDefault();
-				const value = this.inputEl.value.trim();
-				this.close();
-				if (value.length > 0) {
-					onSubmit(value);
-				}
-			}
-		});
+		this.setTitle(promptTitle);
 	}
 
 	onOpen(): void {
-		this.inputEl.focus();
-		this.inputEl.select();
+		const input = this.contentEl.createEl('input', {
+			type: 'text',
+			value: this.initial,
+			placeholder: this.placeholder,
+			cls: 'dired-prompt-input',
+			attr: { 'aria-label': this.promptTitle },
+		});
+		input.addEventListener('keydown', (evt) => {
+			if (evt.key === 'Enter') {
+				evt.preventDefault();
+				const value = input.value.trim();
+				this.close();
+				if (value.length > 0) {
+					this.onSubmit(value);
+				}
+			}
+		});
+		input.focus();
+		input.select();
 	}
 }
 

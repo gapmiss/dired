@@ -43,6 +43,22 @@ export default class DiredPlugin extends Plugin {
 		});
 
 		this.registerEvent(
+			this.app.vault.on('delete', (file) => {
+				if (file instanceof TFolder) {
+					void this.pruneBookmarks(file.path);
+				}
+			})
+		);
+
+		this.registerEvent(
+			this.app.vault.on('rename', (file, oldPath) => {
+				if (file instanceof TFolder) {
+					void this.remapBookmarks(oldPath, file.path);
+				}
+			})
+		);
+
+		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu, file) => {
 				if (file instanceof TFolder) {
 					menu.addItem((item) => {
@@ -84,6 +100,30 @@ export default class DiredPlugin extends Plugin {
 		return added;
 	}
 
+	private async pruneBookmarks(folderPath: string): Promise<void> {
+		const next = this.settings.bookmarks.filter(
+			(path) => path !== folderPath && !path.startsWith(`${folderPath}/`)
+		);
+		if (next.length !== this.settings.bookmarks.length) {
+			this.settings.bookmarks = next;
+			await this.saveData(this.settings);
+		}
+	}
+
+	private async remapBookmarks(oldPath: string, newPath: string): Promise<void> {
+		let changed = false;
+		this.settings.bookmarks = this.settings.bookmarks.map((path) => {
+			if (path === oldPath || path.startsWith(`${oldPath}/`)) {
+				changed = true;
+				return newPath + path.slice(oldPath.length);
+			}
+			return path;
+		});
+		if (changed) {
+			await this.saveData(this.settings);
+		}
+	}
+
 	private async openDiredAtActiveFile(): Promise<void> {
 		// An existing view is revealed as the user left it; the active file only
 		// decides the folder (and cursor) when the view is opened fresh.
@@ -100,7 +140,23 @@ export default class DiredPlugin extends Plugin {
 		await this.openDired(file?.parent?.path ?? '/', file?.path);
 	}
 
+	private opening: Promise<void> | null = null;
+
 	private async openDired(folderPath: string, cursorPath?: string): Promise<void> {
+		// Serialize concurrent invocations (e.g. ribbon double-click) so only one
+		// dired leaf is ever created.
+		if (this.opening) {
+			return this.opening;
+		}
+		this.opening = this.doOpenDired(folderPath, cursorPath);
+		try {
+			await this.opening;
+		} finally {
+			this.opening = null;
+		}
+	}
+
+	private async doOpenDired(folderPath: string, cursorPath?: string): Promise<void> {
 		let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_DIRED)[0] ?? null;
 		if (!leaf) {
 			leaf = this.app.workspace.getLeaf('tab');

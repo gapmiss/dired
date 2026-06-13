@@ -5,6 +5,8 @@ import type { DecorationSet } from '@codemirror/view';
 import { TFolder, prepareFuzzySearch } from 'obsidian';
 import type { SearchMatches } from 'obsidian';
 
+export const nameCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
 export const ENTRY_START_LINE = 3;
 export const EMPTY_TEXT = '(empty)';
 export const NO_MATCHES_TEXT = '(no matches)';
@@ -64,9 +66,7 @@ export function buildListing(
 	showHints: boolean,
 	filterQuery = ''
 ): { listing: DiredListing; text: string } {
-	const children = [...folder.children].sort((a, b) =>
-		a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-	);
+	const children = [...folder.children].sort((a, b) => nameCollator.compare(a.name, b.name));
 	let entries: DiredEntry[] = children.map((child) => ({
 		path: child.path,
 		name: child.name,
