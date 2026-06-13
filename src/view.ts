@@ -1,5 +1,6 @@
 import { ItemView, Notice, TFile, TFolder, normalizePath } from 'obsidian';
 import type { SplitDirection, TAbstractFile, ViewStateResult, WorkspaceLeaf } from 'obsidian';
+
 import { Compartment, EditorSelection, EditorState, Prec, Transaction } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
 import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view';
@@ -609,6 +610,10 @@ export class DiredView extends ItemView {
 	}
 
 	private async createInCurrentFolder(name: string, isFolder: boolean): Promise<void> {
+		if (name.startsWith('.')) {
+			new Notice(`Name cannot start with ".": "${name}"`);
+			return;
+		}
 		const path = normalizePath(joinPath(this.listing.folderPath, name));
 		const slash = path.lastIndexOf('/');
 		const parent = slash < 0 ? '/' : path.substring(0, slash);
@@ -789,7 +794,35 @@ export class DiredView extends ItemView {
 				new Notice(`Empty name on line ${lineNo}`);
 				return true;
 			}
+			if (newName.startsWith('.')) {
+				new Notice(`Name cannot start with ".": "${newName}"`);
+				return true;
+			}
 			renames.push({ entry, newPath: normalizePath(joinPath(this.listing.folderPath, newName)) });
+		}
+		const renameSources = new Set(renames.map((r) => r.entry.path));
+		const existing = new Set(
+			this.renameOriginal.map((e) => e.path).filter((p) => !renameSources.has(p)),
+		);
+		const destCounts = new Map<string, number>();
+		for (const { newPath } of renames) {
+			destCounts.set(newPath, (destCounts.get(newPath) ?? 0) + 1);
+		}
+		const conflicts: string[] = [];
+		for (const [dest, count] of destCounts) {
+			if (count > 1) {
+				const name = dest.slice(dest.lastIndexOf('/') + 1);
+				conflicts.push(`Cannot rename ${count} items to the same name "${name}"`);
+			} else if (existing.has(dest)) {
+				const name = dest.slice(dest.lastIndexOf('/') + 1);
+				conflicts.push(`"${name}" already exists`);
+			}
+		}
+		if (conflicts.length > 0) {
+			for (const msg of conflicts) {
+				new Notice(msg);
+			}
+			return true;
 		}
 		this.exitRenameMode();
 		if (renames.length === 0) {
