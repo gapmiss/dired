@@ -1,6 +1,6 @@
 {
 	"name": "dired",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Navigate and manage files directly, inspired by the Dired mode from Emacs.",
 	"main": "main.js",
 	"scripts": {
