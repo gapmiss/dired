@@ -935,6 +935,9 @@ export class DiredView extends ItemView {
 		if (!(file instanceof TFile)) {
 			return;
 		}
+		if (!this.app.viewRegistry.getTypeByExtension(file.extension)) {
+			return;
+		}
 		const direction: SplitDirection = this.plugin.settings.previewPlacement === 'bottom' ? 'horizontal' : 'vertical';
 		if (this.previewLeaf && (!this.isLeafAttached(this.previewLeaf) || this.previewDirection !== direction)) {
 			if (this.isLeafAttached(this.previewLeaf)) {
