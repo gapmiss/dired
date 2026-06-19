@@ -950,6 +950,8 @@ export class DiredView extends ItemView {
 			this.previewDirection = direction;
 		}
 		await this.previewLeaf.openFile(file, { active: false });
+		this.app.workspace.revealLeaf(this.previewLeaf);
+		this.app.workspace.setActiveLeaf(this.leaf, { focus: true });
 	}
 
 	private isLeafAttached(leaf: WorkspaceLeaf): boolean {
