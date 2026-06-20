@@ -118,9 +118,20 @@
 	width: 100%;
 }
 
-.dired-suggestion-bookmark {
+.dired-suggestion-row {
+	display: flex;
+	align-items: center;
+}
+
+.dired-suggestion-row > .suggestion-content {
+	flex: 1;
+	min-width: 0;
+}
+
+.dired-suggestion-bookmark,
+.dired-suggestion-create {
 	display: inline-flex;
-	vertical-align: middle;
+	flex-shrink: 0;
 	margin-left: var(--size-4-2);
 	color: var(--text-accent);
 }

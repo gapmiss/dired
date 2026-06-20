@@ -19,7 +19,7 @@ import {
 	setDecorations,
 } from './state';
 import type { DiredEntry, DiredListing } from './state';
-import { FolderSuggestModal, JumpModal, PromptModal } from './modals';
+import { FolderSuggestModal, JumpModal, MoveSuggestModal, PromptModal } from './modals';
 
 export const VIEW_TYPE_DIRED = 'dired';
 
@@ -667,10 +667,32 @@ export class DiredView extends ItemView {
 			return true;
 		}
 		const placeholder = `Move ${targets.length} item${targets.length === 1 ? '' : 's'} to…`;
-		new FolderSuggestModal(this.app, this.allFolders(), placeholder, (destination) => {
-			void this.moveEntries(targets, destination);
+		new MoveSuggestModal(this.app, this.allFolders(), placeholder, (item) => {
+			if (item.kind === 'existing') {
+				void this.moveEntries(targets, item.folder);
+			} else {
+				void this.createFolderAndMove(targets, item.path);
+			}
 		}).open();
 		return true;
+	}
+
+	private async createFolderAndMove(targets: DiredEntry[], folderPath: string): Promise<void> {
+		try {
+			await this.app.vault.createFolder(folderPath);
+		} catch (error) {
+			new Notice(`Could not create folder: ${error instanceof Error ? error.message : String(error)}`);
+			this.focusEditor();
+			return;
+		}
+		this.folderCache = null;
+		const folder = this.app.vault.getAbstractFileByPath(folderPath);
+		if (!(folder instanceof TFolder)) {
+			new Notice(`Could not find created folder: ${folderPath}`);
+			this.focusEditor();
+			return;
+		}
+		await this.moveEntries(targets, folder);
 	}
 
 	private async moveEntries(targets: DiredEntry[], destination: TFolder): Promise<void> {
@@ -950,7 +972,7 @@ export class DiredView extends ItemView {
 			this.previewDirection = direction;
 		}
 		await this.previewLeaf.openFile(file, { active: false });
-		this.app.workspace.revealLeaf(this.previewLeaf);
+		await this.app.workspace.revealLeaf(this.previewLeaf);
 		this.app.workspace.setActiveLeaf(this.leaf, { focus: true });
 	}
 
