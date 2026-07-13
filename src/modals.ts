@@ -97,7 +97,7 @@ export class MoveSuggestModal extends SuggestModal<MoveItem> {
 		}
 		scored.sort((a, b) => b.score - a.score);
 		const items = scored.map((s) => s.item);
-		if (query.length > 0 && query.includes('/')) {
+		if (query.length > 0) {
 			const normalized = normalizePath(query);
 			if (
 				normalized.length > 0 &&
