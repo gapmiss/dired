@@ -667,13 +667,23 @@ export class DiredView extends ItemView {
 			return true;
 		}
 		const placeholder = `Move ${targets.length} item${targets.length === 1 ? '' : 's'} to…`;
-		new MoveSuggestModal(this.app, this.allFolders(), placeholder, (item) => {
-			if (item.kind === 'existing') {
-				void this.moveEntries(targets, item.folder);
-			} else {
-				void this.createFolderAndMove(targets, item.path);
-			}
-		}).open();
+		const bookmarks = this.plugin.getBookmarks();
+		const all = this.allFolders();
+		const bookmarked = all.filter((folder) => bookmarks.has(folder.path));
+		const rest = all.filter((folder) => !bookmarks.has(folder.path));
+		new MoveSuggestModal(
+			this.app,
+			bookmarked.concat(rest),
+			placeholder,
+			(item) => {
+				if (item.kind === 'existing') {
+					void this.moveEntries(targets, item.folder);
+				} else {
+					void this.createFolderAndMove(targets, item.path);
+				}
+			},
+			bookmarks
+		).open();
 		return true;
 	}
 
