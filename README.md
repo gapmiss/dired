@@ -1,98 +1,91 @@
 # Dired
 
-Navigate and manage vault files from a keyboard-driven text buffer, inspired by the [Dired mode](https://www.gnu.org/software/emacs/manual/html_node/emacs/Dired.html) from Emacs.
+A keyboard-driven file manager for Obsidian, modeled on [Dired](https://www.gnu.org/software/emacs/manual/html_node/emacs/Dired.html) from Emacs.
 
-The directory listing is a real CodeMirror buffer: the first line is the current path, folders end with `/`, and every operation is a single key (or two-key chord) away.
+Dired shows a folder as a text buffer, one entry per line. Move the cursor to a file and press a key to open, mark, rename, move, or delete it. No mouse needed.
 
 ![](assets/dired-demo-screenshot.png)
 
 ## Features
 
-- **Text-buffer file manager** — navigate with the cursor, no mouse required
-- **Marks** — mark multiple files, then move or delete them in one batch
-- **Rename mode (wdired-style)** — press `R`, edit names directly in the buffer, press `Enter` to apply. `Ctrl+Alt+↑/↓` stacks cursors on adjacent lines to edit many names at once. Renames and moves go through Obsidian's `FileManager`, so wiki links and embeds are updated automatically
-- **Safe deletes** — deletions use Obsidian's native per-file confirmation (respecting your "Confirm file deletion" and "Deleted files" preferences), including the prompt to delete linked attachments
-- **Bookmarks** — bookmark folders and fuzzy-jump to them from anywhere
-- **Preview mode** — automatically open the file at the cursor in a split as you move
-- **Inline key hints** — the bottom of the buffer lists every binding; toggle with `?`
-- **Auto-refresh** — the listing stays in sync as the vault changes
+- **Marks.** Mark several files, then move or delete them together.
+- **Rename in place.** Press `R`, edit names right in the buffer, and press `Enter`. Add cursors on neighboring lines to edit many names at once.
+- **Links stay intact.** Renames and moves go through Obsidian, so links and embeds update automatically.
+- **Native deletes.** Deleting uses Obsidian's own prompt and respects your trash settings.
+- **Fuzzy filter.** Press `/` and type a few letters to narrow the listing.
+- **Bookmarks.** Save folders you visit often and jump to them from anywhere.
+- **Preview.** Show the file under the cursor in a split as you move through the list.
+- **Always current.** The listing updates when files change, even from sync or other plugins.
 
-## Key bindings
+## Getting started
+
+Run **Dired: Open** from the command palette, click the folder-tree icon in the ribbon, or right-click a folder in the file explorer and choose **Open in dired**.
+
+The key list at the bottom of the buffer covers everything. Press `?` to hide it once you know your way around.
+
+For a full walkthrough, read the [user guide](USER-GUIDE.md).
+
+## Keys
 
 | Key | Action |
 | --- | --- |
-| `m` | Toggle mark (and advance) |
-| `t` | Toggle all marks |
-| `U` | Unmark all |
-| `*.` | Mark by file extension |
-| `Enter` / `o` | Open file / view directory |
-| `R` | Rename mode — edit names in the buffer, `Enter` applies, `Esc` cancels |
-| `Ctrl+Alt+↑/↓` | Add cursors above/below for column editing (rename mode only) |
-| `M` | Move marked files (or file at cursor) |
-| `D` | Delete marked files (or file at cursor) to trash |
-| `cd` | Create directory |
-| `cf` | Create file |
-| `u` | Up to parent directory |
-| `g` | Go to directory |
-| `B` | Go to bookmark or any directory |
-| `ab` | Toggle bookmark for current directory |
-| `p` / `n` | Move to previous / next file |
-| `j` | Jump to file/dir name |
-| `r` | Refresh view |
-| `P` | Toggle preview mode on/off |
-| `?` | Toggle key hints |
+| `n` / `p` | Next / previous entry |
+| `Enter` / `o` | Open file or folder |
+| `u` | Up to parent folder |
+| `g` | Go to any folder |
+| `j` | Jump to an entry in this folder |
+| `/` | Filter entries (`Esc` clears) |
+| `r` | Refresh |
+| `m` | Mark or unmark, then move down |
+| `t` | Flip all marks |
+| `U` | Clear all marks |
+| `*` `.` | Mark by file extension |
+| `R` | Rename mode (`Enter` applies, `Esc` cancels) |
+| `Ctrl+Alt+↑` / `↓` | Add a cursor above / below (rename mode) |
+| `M` | Move marked entries, or the one at the cursor |
+| `D` | Delete marked entries, or the one at the cursor |
+| `c` `d` | Create folder |
+| `c` `f` | Create file |
+| `a` `b` | Bookmark this folder, or remove the bookmark |
+| `B` | Go to a bookmark or any folder |
+| `P` | Preview mode on/off |
+| `?` | Show or hide the key list |
 
-Multi-file operations (`M`, `D`) apply to marked files, or to the file at the cursor when nothing is marked. In rename mode you can also type a relative path (for example `sub/note.md`) to move a file into an existing subfolder.
+Keys shown as two letters, like `c` `d`, are pressed one after the other.
 
-## Usage
+## Settings
 
-- Command palette: **Dired: Open** (starts in the active file's folder) or **Dired: Open vault root**
-- Ribbon: the folder-tree icon
-- File explorer: right-click a folder → **Open in dired**
+**Preview placement** chooses whether the preview opens to the right of dired or below it.
 
 ## Customization
 
-The view inherits your theme's monospace font and editor font size. Everything else — fonts, colors, line numbers, spacing — can be overridden with a CSS snippet: see [THEME.md](THEME.md) for a selector reference, recipes, and a visual showcase snippet.
-
-## Notes and limitations
-
-- Vault-scoped: the listing shows what Obsidian indexes, so hidden folders such as `.obsidian` do not appear
-- Marks live per view and are pruned automatically when files disappear
-- The buffer is read-only outside rename mode; arrow keys, `Home`/`End`, and selection all work as in a normal editor
+Dired picks up your theme's monospace font, font size, and colors. To change the look, see [THEME.md](THEME.md).
 
 ## Installation
 
-[Install from community.obsidian.md](https://community.obsidian.md/plugins/dired)
+From Obsidian:
 
-From Obsidian's settings or preferences:
+1. Open Settings → Community plugins → Browse.
+2. Search for "Dired", then install and enable it.
 
-1. Community Plugins > Browse
-2. Search for "Dired"
+Or [install it from community.obsidian.md](https://community.obsidian.md/plugins/dired).
 
 Manually:
 
-1. download the latest [release](https://github.com/gapmiss/dired/releases/latest) archive
-2. uncompress the downloaded archive
-3. move the `dired` folder to `/path/to/vault/.obsidian/plugins/` 
-4.  Settings > Community plugins > reload **Installed plugins**
-5.  enable plugin
-
-or:
-
-1.  download `main.js`, `manifest.json` & `styles.css` from the latest [release](https://github.com/gapmiss/dired/releases/latest)
-2.  create a new folder `/path/to/vault/.obsidian/plugins/dired`
-3.  move all 3 files to `/path/to/vault/.obsidian/plugins/dired`
-4.  Settings > Community plugins > reload **Installed plugins**
-5.  enable plugin
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/gapmiss/dired/releases/latest).
+2. Put them in a new folder at `<your vault>/.obsidian/plugins/dired/`.
+3. In Settings → Community plugins, reload the plugin list and enable Dired.
 
 ## Development
 
 ```bash
 npm install
-npm run dev     # esbuild watch
-npm run build   # type-check + production build
-npm run lint    # eslint (eslint-plugin-obsidianmd)
+npm run dev     # rebuild on change
+npm run build   # type-check and production build
+npm run lint    # eslint with eslint-plugin-obsidianmd
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

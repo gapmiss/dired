@@ -1,28 +1,30 @@
 # Theming dired
 
-Out of the box, dired matches your theme — same fonts, same colors. If you want it to look different, you can change any element of it with a small CSS snippet. This guide lists every element you can style, with ready-to-copy examples.
+Dired uses your theme's fonts and colors. To change how it looks, add a CSS snippet. This page lists every part you can style and has examples to copy.
 
 ## Using a snippet
 
 1. Create a file in your vault at `.obsidian/snippets/dired.css`
 2. Enable it under **Settings → Appearance → CSS snippets**
 
-Snippets load after plugin styles, so a rule with the same selector wins automatically — no `!important` needed. Copy the selectors below exactly as written.
+Snippets load after plugin styles, so a rule with the same selector wins. You don't need `!important`. Copy the selectors below exactly as written.
 
 ## Selector reference
 
 | Selector | What it styles |
 | --- | --- |
 | `.dired-view` | The whole view container (buffer + filter bar) |
-| `.dired-view .cm-editor` | Editor frame — font family/size, background |
+| `.dired-view .cm-editor` | The buffer: font family, font size, background |
 | `.dired-view .cm-editor.cm-focused` | The buffer while focused |
-| `.dired-view .cm-scroller` | Scroll container — line height, padding |
+| `.dired-view .cm-scroller` | Scroll container: line height, padding |
 | `.dired-view .cm-content` | Text content area |
 | `.dired-view .cm-gutters` | Line-number gutter |
 | `.dired-view .cm-activeLine` | The cursor line |
 | `.dired-view .cm-activeLineGutter` | Gutter cell of the cursor line |
-| `.dired-view .cm-line.dired-header` | Line 1 — the current path |
+| `.dired-view .cm-line.dired-header` | Line 1, the current path |
+| `.dired-view .cm-line.dired-entry` | Every file and folder entry |
 | `.dired-view .cm-line.dired-folder` | Folder entries |
+| `.dired-view .cm-line.dired-file` | File entries |
 | `.dired-view .cm-line.dired-marked` | Marked entries |
 | `.dired-view .cm-line.dired-marked.cm-activeLine` | A marked entry that is also the cursor line |
 | `.dired-view .cm-line.dired-empty` | The `(empty)` / `(no matches)` placeholder |
@@ -31,10 +33,12 @@ Snippets load after plugin styles, so a rule with the same selector wins automat
 | `.dired-view .dired-filter-input` | Fuzzy filter text input |
 | `.dired-view .cm-line .dired-filter-match` | Matched characters while filtering |
 | `.dired-view.dired-rename-mode .cm-editor` | The buffer while in rename mode (`R`) |
-| `.dired-prompt-input` | Text input in the create/prompt modals |
-| `.dired-suggestion-bookmark` | Bookmark icon in the folder-suggest modal |
+| `.dired-prompt-input` | Text input in the create and mark-by-extension prompts |
+| `.dired-suggestion-bookmark` | Bookmark icon in the `B` and `M` folder pickers |
+| `.dired-suggestion-create` | New-folder icon in the `M` move picker |
+| `.dired-suggestion-row` | A picker row that has one of those icons |
 
-If a tweak stops working after a plugin update, a selector may have changed — check the plugin's `styles.css` for the current names.
+If a tweak stops working after an update, a selector may have changed. Check the plugin's `styles.css` for the current names.
 
 ## Recipes
 
@@ -44,7 +48,7 @@ If a tweak stops working after a plugin update, a selector may have changed — 
 	font-size: 18px;
 }
 
-/* Scale all dired text relative to your editor font size —
+/* Scale all dired text relative to your editor font size:
    90% here, never smaller than 12px or larger than 18px.
    Line numbers and the filter input don't inherit the buffer
    size, so they're included too. */
@@ -88,10 +92,10 @@ If a tweak stops working after a plugin update, a selector may have changed — 
 
 ## Showcase snippet
 
-This snippet gives every element of the view a deliberately loud style, so you can see exactly which rule controls what. Enable it, look around, then keep and tweak only the rules you want.
+This snippet paints every part of the view in a loud color so you can see which rule controls what. Turn it on, look around, then keep only the rules you want and tone them down.
 
 ```css
-/* ===== Dired showcase — one loud style per element ===== */
+/* ===== Dired showcase: one loud style per element ===== */
 
 /* Whole view container (filter bar + buffer) */
 .dired-view {
@@ -109,7 +113,7 @@ This snippet gives every element of the view a deliberately loud style, so you c
 	box-shadow: inset 0 0 0 3px orange;
 }
 
-/* Scroll container — line spacing lives here */
+/* Scroll container: line spacing lives here */
 .dired-view .cm-scroller {
 	line-height: 2;
 }
@@ -141,9 +145,19 @@ This snippet gives every element of the view a deliberately loud style, so you c
 	font-size: 1.4em;
 }
 
+/* Every entry, file or folder */
+.dired-view .cm-line.dired-entry {
+	letter-spacing: 0.1em;
+}
+
 /* Folder entries */
 .dired-view .cm-line.dired-folder {
 	color: springgreen;
+}
+
+/* File entries */
+.dired-view .cm-line.dired-file {
+	color: wheat;
 }
 
 /* Marked entries */
@@ -189,13 +203,18 @@ This snippet gives every element of the view a deliberately loud style, so you c
 	background: rgb(60 20 20);
 }
 
-/* Outside the view: rename/create prompt input */
+/* Outside the view: create and mark-by-extension prompt input */
 .dired-prompt-input {
 	border: 2px solid magenta;
 }
 
-/* Outside the view: bookmark icon in the folder-suggest modal */
+/* Outside the view: bookmark icon in the B and M folder pickers */
 .dired-suggestion-bookmark {
 	color: red;
+}
+
+/* Outside the view: new-folder icon in the M move picker */
+.dired-suggestion-create {
+	color: lime;
 }
 ```
